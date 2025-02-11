@@ -1,0 +1,41 @@
+#board {
+    position: relative;
+    background-color: black;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.ship {
+    position: absolute;
+    background: url('ship.png') no-repeat;
+    background-size: contain;
+}
+
+.alien {
+    position: absolute;
+    background: url('alien.png') no-repeat;
+    background-size: contain;
+}
+
+.bullet {
+    position: absolute;
+    background-color: white;
+}
+
+.game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    display: none;
+}
+
+#score {
+    color: white;
+    font-family: courier;
+    font-size: 16px;
+    padding: 10px;
+    text-align: center;
+}
