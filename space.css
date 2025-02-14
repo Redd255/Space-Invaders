@@ -19,10 +19,11 @@ body {
 }
 .wall {
     position: absolute;
-    background-color: gray;
+    background-color: #00FF00;;
     border-radius: 5px;
     opacity: 1;
     transition: opacity 0.3s;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.4), 0 0 30px rgba(0, 255, 0, 0.2);
 }
 
 #board::before {
