@@ -64,6 +64,7 @@ const backgroundMusic = new Audio("/music/background.wav")
 
 
 window.onload = function () {
+    updateLevelStory(level); 
 
     backgroundMusic.loop = true;
     backgroundMusic.play();
@@ -300,8 +301,19 @@ function update() {
         alienRows = Math.min(alienRows + 1, rows - 4);
         alienVelocityX += alienVelocityX > 0 ? 0.2 : -0.2;
         createAliens();
+        updateLevelStory(level); 
     }
 
+}
+
+// Function to update level story
+function updateLevelStory(level) {
+    const storyDiv = document.getElementById('levelStory');
+    const content = getLevelContent(level);
+    storyDiv.innerHTML = `
+        <h2>Level ${level}: ${content.title}</h2>
+        <p>${content.story}</p>
+    `;
 }
 
 // Check if the player typing the keys
@@ -399,5 +411,45 @@ function debounce(func, delay) {
         timer = setTimeout(() => {
             timer = null;
         }, delay);
+    };
+}
+
+// Level stories configuration
+const levelStories = {
+    1: {
+        title: "The Beginning",
+        story: "Earth's first line of defense. You command humanity's prototype space fighter against the initial alien scouts. They're testing our defenses - show them we're ready."
+    },
+    2: {
+        title: "Rising Threat",
+        story: "The aliens have called for reinforcements. More ships, tighter formations. The real battle for Earth begins now."
+    },
+    3: {
+        title: "Strategic Formation",
+        story: "The invaders have analyzed our tactics. They've adopted a new attack pattern with strengthened defenses. Stay alert, pilot."
+    },
+    4: {
+        title: "Elite Squadron",
+        story: "You've gained their respect. The aliens have dispatched their elite warriors. Their ships are faster and their aim deadlier."
+    },
+    5: {
+        title: "The Commander",
+        story: "Intelligence reports a commanding officer among the invasion force. Defeat them, and we might just turn the tide of this war."
+    },
+    6: {
+        title: "Full Invasion",
+        story: "The entire alien armada has arrived. Earth's fate rests in your hands. Show them the true spirit of humanity."
+    },
+    7: {
+        title: "Final Stand",
+        story: "This is it. Their supreme leader has joined the battle. Victory here means survival for Earth. Defeat means extinction."
+    }
+};
+
+// Function to get level content
+function getLevelContent(level) {
+    return levelStories[level] || {
+        title: `Unknown Level ${level}`,
+        story: "New challenges await in uncharted space."
     };
 }
