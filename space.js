@@ -1,27 +1,35 @@
-// Board configuration
-let tileSize = 30;
-let rows = 20;
-let columns = 20;
+// General configuration
+const tileSize = 40;
+const rows = 20;
+const columns = 20;
+let gameOver = false;
 
+// Board configuration
 let board;
 let boardWidth = tileSize * columns;
 let boardHeight = tileSize * rows;
+
+// Progress configuration
+let level = 1;
+let score = 0;
+const health = 3;
 
 // Ship configuration
 let shipWidth = tileSize * 2;
 let shipHeight = tileSize;
 let shipX = tileSize * columns / 2 - tileSize;
 let shipY = tileSize * rows - tileSize * 2;
-
 let ship = {
     x: shipX,
     y: shipY,
     width: shipWidth,
     height: shipHeight,
+    health: health,
     element: null
 };
-
-let shipVelocityX = tileSize;
+let movingRight = false;
+let movingLeft = false;
+let shipVelocityX = 5;
 
 // Aliens configuration
 let alienArray = [];
@@ -29,45 +37,131 @@ let alienWidth = tileSize * 2;
 let alienHeight = tileSize;
 let alienX = tileSize;
 let alienY = tileSize;
-
 let alienRows = 2;
 let alienColumns = 3;
 let alienCount = 0;
 let alienVelocityX = 1;
 
-// Bullets configuration
+// Walls configuration
+let walls = [];
+let wallWidth = tileSize * 2;
+let wallHeight = tileSize;
+let wallRows = 1;
+let wallColumns = 3;
+let wallHealth = 3;
+
+// Ship Bullets configuration
 let bulletArray = [];
 let bulletVelocityY = -10;
 
-let score = 0;
-let gameOver = false;
+// Aliens Bullets configuration
+let alienBulletArray = [];
+let alienBulletVelocityY = 5;
+
+// Sounds
+const shootSound = new Audio("/music/shoot.wav");
+const backgroundMusic = new Audio("/music/background.wav")
+
 
 window.onload = function () {
+
+    backgroundMusic.loop = true;
+    backgroundMusic.play();
+
     board = document.getElementById("board");
     board.style.width = boardWidth + "px";
     board.style.height = boardHeight + "px";
 
-    // Create ship element
     ship.element = document.createElement("div");
     ship.element.className = "ship";
     ship.element.style.width = shipWidth + "px";
     ship.element.style.height = shipHeight + "px";
+
     board.appendChild(ship.element);
 
     createAliens();
+    createWalls();
     requestAnimationFrame(update);
 
+    // Move
     document.addEventListener("keydown", moveShip);
-    document.addEventListener("keyup", shoot);
+    document.addEventListener("keyup", stopShip);
+
+    // Shoot
+    const debouncedShoot = debounce(shoot, 100);
+    document.addEventListener("keyup", debouncedShoot);
 };
+
+function createAliens() {
+    // Clear existing aliens
+    alienArray.forEach(alien => alien.element.remove());
+    alienArray = [];
+
+    // Create new aliens
+    for (let c = 0; c < alienColumns; c++) {
+        for (let r = 0; r < alienRows; r++) {
+            let alien = {
+                x: alienX + c * alienWidth,
+                y: alienY + r * alienHeight,
+                width: alienWidth,
+                height: alienHeight,
+                alive: true,
+                element: document.createElement("div")
+            };
+
+            alien.element.className = "alien";
+            alien.element.style.width = alienWidth + "px";
+            alien.element.style.height = alienHeight + "px";
+            alien.element.style.left = alien.x + "px";
+            alien.element.style.top = alien.y + "px";
+
+            board.appendChild(alien.element);
+            alienArray.push(alien);
+        }
+    }
+    alienCount = alienArray.length;
+}
+
+function createWalls() {
+    walls = [];
+    let startX = (boardWidth - wallColumns * (wallWidth + tileSize)) / 2;
+    let startY = shipY - tileSize * 4;
+
+    for (let c = 0; c < wallColumns; c++) {
+        let wall = {
+            x: startX + c * (wallWidth + tileSize),
+            y: startY,
+            width: wallWidth,
+            height: wallHeight,
+            health: wallHealth,
+            element: document.createElement("div")
+        };
+
+        wall.element.className = "wall";
+        wall.element.style.width = wall.width + "px";
+        wall.element.style.height = wall.height + "px";
+        wall.element.style.left = wall.x + "px";
+        wall.element.style.top = wall.y + "px";
+
+        board.appendChild(wall.element);
+        walls.push(wall);
+    }
+}
 
 function update() {
     requestAnimationFrame(update);
     if (gameOver) return;
 
-    // Update ship position
+    // Update the ship position
+    if (movingRight && ship.x + shipVelocityX + ship.width <= boardWidth) {
+        ship.x += shipVelocityX;
+    }
+    if (movingLeft && ship.x - shipVelocityX >= 0) {
+        ship.x -= shipVelocityX;
+    }
     ship.element.style.left = ship.x + "px";
     ship.element.style.top = ship.y + "px";
+
 
     // Update aliens
     let edgeReached = false;
@@ -116,6 +210,25 @@ function update() {
             continue;
         }
 
+        // Check collision with walls
+        for (let j = 0; j < walls.length; j++) {
+            let wall = walls[j];
+            if (wall.health > 0 && detectCollision(bullet, wall)) {
+                bullet.used = true;
+                wall.health--;
+
+                if (wall.health === 0) {
+                    wall.element.remove();
+                } else {
+                    wall.element.style.opacity = wall.health / wallHealth;
+                }
+
+                bullet.element.remove();
+                bulletArray.splice(i, 1);
+                break;
+            }
+        }
+
         // Check collisions
         for (let j = 0; j < alienArray.length; j++) {
             let alien = alienArray[j];
@@ -130,60 +243,93 @@ function update() {
         }
     }
 
+    // Update alien bullets
+    for (let i = alienBulletArray.length - 1; i >= 0; i--) {
+        let alienBullet = alienBulletArray[i];
+        alienBullet.y += alienBulletVelocityY;
+        alienBullet.element.style.top = alienBullet.y + "px";
+
+        // Remove out of bounds alien bullets
+        if (alienBullet.y > boardHeight) {
+            alienBullet.element.remove();
+            alienBulletArray.splice(i, 1);
+            continue;
+        }
+
+        // Check collision with walls
+        for (let j = 0; j < walls.length; j++) {
+            let wall = walls[j];
+            if (wall.health > 0 && detectCollision(alienBullet, wall)) {
+                alienBullet.used = true;
+                wall.health--;
+
+                if (wall.health === 0) {
+                    wall.element.remove();
+                } else {
+                    wall.element.style.opacity = wall.health / wallHealth;
+                }
+
+                alienBullet.element.remove();
+                alienBulletArray.splice(i, 1);
+                break;
+            }
+        }
+        // Check collision with ship
+        if (detectCollision(alienBullet, ship)) {
+            ship.health--;
+            document.getElementById("health").textContent = "Health: " + ship.health;
+
+            alienBullet.element.remove();
+            alienBulletArray.splice(i, 1); 
+
+            if (ship.health === 0) {
+                gameOver = true;
+                document.getElementById("gameOver").style.display = "block";
+                document.getElementById("finalScore").textContent = score;
+            }
+            continue;
+        }
+    }
+
     // Next level
     if (alienCount === 0) {
+        level++
+        document.getElementById("level").textContent = "Level: " + level
         score += alienColumns * alienRows * 100;
         alienColumns = Math.min(alienColumns + 1, columns / 2 - 2);
         alienRows = Math.min(alienRows + 1, rows - 4);
         alienVelocityX += alienVelocityX > 0 ? 0.2 : -0.2;
         createAliens();
     }
+
 }
 
+// Check if the player typing the keys
 function moveShip(e) {
     if (gameOver) return;
-
-    if (e.code === "ArrowLeft" && ship.x - shipVelocityX >= 0) {
-        ship.x -= shipVelocityX;
-    } else if (e.code === "ArrowRight" && ship.x + shipVelocityX + ship.width <= boardWidth) {
-        ship.x += shipVelocityX;
+    console.log(e)
+    if (e.code === "ArrowLeft") {
+        movingLeft = true;
+    } else if (e.code === "ArrowRight") {
+        movingRight = true;
     }
 }
 
-function createAliens() {
-    // Clear existing aliens
-    alienArray.forEach(alien => alien.element.remove());
-    alienArray = [];
-
-    // Create new aliens
-    for (let c = 0; c < alienColumns; c++) {
-        for (let r = 0; r < alienRows; r++) {
-            let alien = {
-                x: alienX + c * alienWidth,
-                y: alienY + r * alienHeight,
-                width: alienWidth,
-                height: alienHeight,
-                alive: true,
-                element: document.createElement("div")
-            };
-
-            alien.element.className = "alien";
-            alien.element.style.width = alienWidth + "px";
-            alien.element.style.height = alienHeight + "px";
-            alien.element.style.left = alien.x + "px";
-            alien.element.style.top = alien.y + "px";
-
-            board.appendChild(alien.element);
-            alienArray.push(alien);
-        }
+// Check if the player stop typing the keys
+function stopShip(e) {
+    if (gameOver) return;
+    console.log(e)
+    if (e.code === "ArrowLeft") {
+        movingLeft = false;
+    } else if (e.code === "ArrowRight") {
+        movingRight = false;
     }
-    alienCount = alienArray.length;
 }
 
 function shoot(e) {
     if (gameOver || e.code !== "Space") return;
-
-    let bullet = {
+    let bulletSound = shootSound.cloneNode(); 
+    bulletSound.play(); let bullet = {
         x: ship.x + shipWidth / 2 - tileSize / 16,
         y: ship.y,
         width: tileSize / 8,
@@ -207,4 +353,51 @@ function detectCollision(a, b) {
         a.x + a.width > b.x &&
         a.y < b.y + b.height &&
         a.y + a.height > b.y;
+}
+
+function alienShoot() {
+    // Choose a random alien to shoot
+    let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
+
+    // If the alien is alive, create a bullet
+    if (randomAlien.alive) {
+        let alienBullet = {
+            x: randomAlien.x + randomAlien.width / 2 - tileSize / 16, 
+            y: randomAlien.y + randomAlien.height, 
+            width: tileSize / 8,
+            height: tileSize / 2,
+            used: false,
+            element: document.createElement("div")
+        };
+
+        alienBullet.element.className = "alienBullet";
+        alienBullet.element.style.width = alienBullet.width + "px";
+        alienBullet.element.style.height = alienBullet.height + "px";
+        alienBullet.element.style.left = alienBullet.x + "px";
+        alienBullet.element.style.top = alienBullet.y + "px";
+
+        board.appendChild(alienBullet.element);
+        alienBulletArray.push(alienBullet);
+    }
+}
+
+// Helper function for Aliens shoots 
+function scheduleAlienShoot() {
+    setTimeout(() => {
+        alienShoot();
+        scheduleAlienShoot();
+    }, 1000 + Math.random() * 4000);
+}
+scheduleAlienShoot();
+
+// Helper function for Ship shoots 
+function debounce(func, delay) {
+    let timer;
+    return function (...args) {
+        if (timer) return;
+        func.apply(this, args);
+        timer = setTimeout(() => {
+            timer = null;
+        }, delay);
+    };
 }

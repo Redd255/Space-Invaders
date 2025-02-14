@@ -1,25 +1,64 @@
+body {
+    background-color: black;
+    color: #00FF00;
+    font-family: 'Courier New', Courier, monospace;
+    text-align: center;
+    background: #000000;
+    position: relative;
+}
+
 #board {
     position: relative;
     background-color: black;
+    border: 2px solid #00FF00;
     overflow: hidden;
     margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.4), 0 0 30px rgba(0, 255, 0, 0.2);
+}
+.wall {
+    position: absolute;
+    background-color: gray;
+    border-radius: 5px;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+#board::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(0deg,
+            rgba(0, 255, 0, 0.3) 0,
+            rgba(0, 255, 0, 0.3) 1px,
+            transparent 1px,
+            transparent 3px);
+    pointer-events: none;
 }
 
 .ship {
     position: absolute;
-    background: url('ship.png') no-repeat;
+    background: url('/media/ship.png') no-repeat;
     background-size: contain;
 }
 
 .alien {
     position: absolute;
-    background: url('alien.png') no-repeat;
+    background: url('/media/alien.png') no-repeat;
     background-size: contain;
+    filter: hue-rotate(120deg) brightness(1.5);
 }
 
-.bullet {
+
+.bullet,
+.alienBullet {
     position: absolute;
-    background-color: white;
+    background-color: #00FF00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
 }
 
 .game-over {
@@ -27,15 +66,15 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: white;
+    color: #00FF00;
     font-size: 24px;
     display: none;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
-#score {
-    color: white;
-    font-family: courier;
-    font-size: 16px;
-    padding: 10px;
-    text-align: center;
+
+.progress {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
 }
