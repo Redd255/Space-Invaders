@@ -1,20 +1,33 @@
+//======================
 // General configuration
+//======================
 const tileSize = 40;
 const rows = 20;
 const columns = 20;
 let gameOver = false;
+let isPaused = false;
+let gameStartTime = null;
+let pausedTime = 0;
+let isTimerRunning = false;
+let totalElapsedTime = 0;
 
+//====================
 // Board configuration
+//====================
 let board;
 let boardWidth = tileSize * columns;
 let boardHeight = tileSize * rows;
 
+//=======================
 // Progress configuration
+//=======================
 let level = 1;
 let score = 0;
 const health = 3;
 
+//===================
 // Ship configuration
+//====================
 let shipWidth = tileSize * 2;
 let shipHeight = tileSize;
 let shipX = tileSize * columns / 2 - tileSize;
@@ -31,7 +44,9 @@ let movingRight = false;
 let movingLeft = false;
 let shipVelocityX = 5;
 
+//=====================
 // Aliens configuration
+//=====================
 let alienArray = [];
 let alienWidth = tileSize * 2;
 let alienHeight = tileSize;
@@ -42,7 +57,9 @@ let alienColumns = 3;
 let alienCount = 0;
 let alienVelocityX = 1;
 
+//====================
 // Walls configuration
+//====================
 let walls = [];
 let wallWidth = tileSize * 2;
 let wallHeight = tileSize;
@@ -50,11 +67,15 @@ let wallRows = 1;
 let wallColumns = 3;
 let wallHealth = 3;
 
-// Ship Bullets configuration
+// ==========================
+// Ship Bullets Configuration
+// ==========================
 let bulletArray = [];
 let bulletVelocityY = -10;
 
-// Aliens Bullets configuration
+// ============================
+// Aliens Bullets Configuration
+// ============================
 let alienBulletArray = [];
 let alienBulletVelocityY = 5;
 
@@ -64,7 +85,7 @@ const backgroundMusic = new Audio("/music/background.wav")
 
 
 window.onload = function () {
-    updateLevelStory(level); 
+    updateLevelStory(level);
 
     backgroundMusic.loop = true;
     backgroundMusic.play();
@@ -83,6 +104,9 @@ window.onload = function () {
     createAliens();
     createWalls();
     requestAnimationFrame(update);
+    startTimer();
+    scheduleAlienShoot();
+
 
     // Move
     document.addEventListener("keydown", moveShip);
@@ -91,7 +115,117 @@ window.onload = function () {
     // Shoot
     const debouncedShoot = debounce(shoot, 100);
     document.addEventListener("keyup", debouncedShoot);
+
+    // Menu
+    document.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !gameOver) {
+            togglePause();
+        }
+    });
 };
+
+function startTimer() {
+    if (!isTimerRunning) {
+        gameStartTime = Date.now() - pausedTime;
+        isTimerRunning = true;
+    }
+}
+
+function updateTimer() {
+    if (gameOver || !isTimerRunning) return;
+
+    const currentTime = Date.now();
+    totalElapsedTime = currentTime - gameStartTime;
+
+    const minutes = Math.floor(totalElapsedTime / 60000);
+    const seconds = Math.floor((totalElapsedTime % 60000) / 1000);
+
+    document.getElementById("gameTimer").textContent =
+        `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        // Pause timer
+        isTimerRunning = false;
+        pausedTime = Date.now() - gameStartTime;
+        backgroundMusic.pause();
+        document.getElementById("pauseMenu").style.display = "block";
+    } else {
+        // Resume timer
+        scheduleAlienShoot();
+        gameStartTime = Date.now() - pausedTime;
+        isTimerRunning = true;
+        backgroundMusic.play();
+        document.getElementById("pauseMenu").style.display = "none";
+    }
+}
+
+function resumeGame() {
+    isPaused = false;
+    document.getElementById("pauseMenu").style.display = "none";
+    backgroundMusic.play();
+}
+
+function restartGame() {
+    gameOver = false;
+    isPaused = false;
+    level = 1;
+    score = 0;
+    ship.health = health;
+    ship.x = tileSize * columns / 2 - tileSize;
+    ship.y = tileSize * rows - tileSize * 2;
+    alienVelocityX = 1;
+    alienColumns = 3;
+    alienRows = 2;
+
+    gameStartTime = Date.now();
+    pausedTime = 0;
+    totalElapsedTime = 0;
+    isTimerRunning = true;
+
+    bulletArray.forEach(bullet => bullet.element.remove());
+    bulletArray = [];
+    alienBulletArray.forEach(bullet => bullet.element.remove());
+    alienBulletArray = [];
+
+    alienArray.forEach(alien => alien.element.remove());
+    alienArray = [];
+    walls.forEach(wall => wall.element.remove());
+    walls = [];
+
+    board.innerHTML = `
+        <div class="progress">
+            <p id="level">Level: 1</p>
+            <p id="score">Score: 0</p>
+            <p id="gameTimer">Time: 00:00</p>
+            <p id="health">Health: ${ship.health}</p>
+        </div>
+        <div id="pauseMenu" class="gameOverScreen" style="display: none;">
+            <h2>Game Paused</h2>
+            <button onclick="resumeGame()">Resume</button>
+            <button onclick="restartGame()">Restart</button>
+        </div>
+    `;
+
+    document.getElementById("gameOver").style.display = "none";
+
+    ship.element = document.createElement("div");
+    ship.element.className = "ship";
+    ship.element.style.width = shipWidth + "px";
+    ship.element.style.height = shipHeight + "px";
+    board.appendChild(ship.element);
+
+    createAliens();
+    createWalls();
+    updateLevelStory(level);
+
+    backgroundMusic.currentTime = 0;
+    backgroundMusic.play();
+    startTimer();
+}
+
 
 function createAliens() {
     // Clear existing aliens
@@ -151,8 +285,8 @@ function createWalls() {
 
 function update() {
     requestAnimationFrame(update);
-    if (gameOver) return;
-
+    if (gameOver || isPaused) return;
+    updateTimer()
     // Update the ship position
     if (movingRight && ship.x + shipVelocityX + ship.width <= boardWidth) {
         ship.x += shipVelocityX;
@@ -281,7 +415,7 @@ function update() {
             document.getElementById("health").textContent = "Health: " + ship.health;
 
             alienBullet.element.remove();
-            alienBulletArray.splice(i, 1); 
+            alienBulletArray.splice(i, 1);
 
             if (ship.health === 0) {
                 gameOver = true;
@@ -301,25 +435,13 @@ function update() {
         alienRows = Math.min(alienRows + 1, rows - 4);
         alienVelocityX += alienVelocityX > 0 ? 0.2 : -0.2;
         createAliens();
-        updateLevelStory(level); 
+        updateLevelStory(level);
     }
-
 }
 
-// Function to update level story
-function updateLevelStory(level) {
-    const storyDiv = document.getElementById('levelStory');
-    const content = getLevelContent(level);
-    storyDiv.innerHTML = `
-        <h2>Level ${level}: ${content.title}</h2>
-        <p>${content.story}</p>
-    `;
-}
 
-// Check if the player typing the keys
 function moveShip(e) {
     if (gameOver) return;
-    console.log(e)
     if (e.code === "ArrowLeft") {
         movingLeft = true;
     } else if (e.code === "ArrowRight") {
@@ -327,10 +449,8 @@ function moveShip(e) {
     }
 }
 
-// Check if the player stop typing the keys
 function stopShip(e) {
     if (gameOver) return;
-    console.log(e)
     if (e.code === "ArrowLeft") {
         movingLeft = false;
     } else if (e.code === "ArrowRight") {
@@ -338,9 +458,17 @@ function stopShip(e) {
     }
 }
 
+
+function detectCollision(a, b) {
+    return a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y;
+}
+
 function shoot(e) {
     if (gameOver || e.code !== "Space") return;
-    let bulletSound = shootSound.cloneNode(); 
+    let bulletSound = shootSound.cloneNode();
     bulletSound.play(); let bullet = {
         x: ship.x + shipWidth / 2 - tileSize / 16,
         y: ship.y,
@@ -360,13 +488,6 @@ function shoot(e) {
     bulletArray.push(bullet);
 }
 
-function detectCollision(a, b) {
-    return a.x < b.x + b.width &&
-        a.x + a.width > b.x &&
-        a.y < b.y + b.height &&
-        a.y + a.height > b.y;
-}
-
 function alienShoot() {
     // Choose a random alien to shoot
     let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
@@ -374,8 +495,8 @@ function alienShoot() {
     // If the alien is alive, create a bullet
     if (randomAlien.alive) {
         let alienBullet = {
-            x: randomAlien.x + randomAlien.width / 2 - tileSize / 16, 
-            y: randomAlien.y + randomAlien.height, 
+            x: randomAlien.x + randomAlien.width / 2 - tileSize / 16,
+            y: randomAlien.y + randomAlien.height,
             width: tileSize / 8,
             height: tileSize / 2,
             used: false,
@@ -397,10 +518,12 @@ function alienShoot() {
 function scheduleAlienShoot() {
     setTimeout(() => {
         alienShoot();
-        scheduleAlienShoot();
-    }, 1000 + Math.random() * 4000);
+        if (isTimerRunning){
+            scheduleAlienShoot();
+        }
+    }, 1000 + Math.random() * 3000);
 }
-scheduleAlienShoot();
+
 
 // Helper function for Ship shoots 
 function debounce(func, delay) {
@@ -412,6 +535,16 @@ function debounce(func, delay) {
             timer = null;
         }, delay);
     };
+}
+
+// Function to update level story
+function updateLevelStory(level) {
+    const storyDiv = document.getElementById('levelStory');
+    const content = getLevelContent(level);
+    storyDiv.innerHTML = `
+        <h2>Level ${level}: ${content.title}</h2>
+        <p>${content.story}</p>
+    `;
 }
 
 // Level stories configuration

@@ -10,12 +10,17 @@
 
     <body>
         <h1>Space Invaders</h1>
-
         <div id="board" >
             <div class="progress">
                 <p id="level">Level: 1</p>
                 <p id="score">Score: 0</p>
-                <p id="health">health: 3</p>
+                <p id="gameTimer">Time: 00:00</p>
+                <p id="health">Health: 3</p>
+            </div>
+            <div id="pauseMenu" class="gameOverScreen">
+                <h2>Game Paused</h2>
+                <button onclick="resumeGame()">Resume</button>
+                <button onclick="restartGame()">Restart</button>
             </div>
         </div>
         <div id="gameOver" class="game-over">Game Over! Final Score: <span id="finalScore"></span></div>
