@@ -152,6 +152,7 @@ function togglePause() {
         pausedTime = Date.now() - gameStartTime;
         backgroundMusic.pause();
         document.getElementById("pauseMenu").style.display = "block";
+        document.getElementById("board").style.filter = "blur(10px)"; 
     } else {
         // Resume timer
         scheduleAlienShoot();
@@ -159,12 +160,16 @@ function togglePause() {
         isTimerRunning = true;
         backgroundMusic.play();
         document.getElementById("pauseMenu").style.display = "none";
+        document.getElementById("board").style.filter = "blur(10px)"; 
+        document.getElementById("board").style.filter = ""; 
+
     }
 }
 
 function resumeGame() {
     isPaused = false;
     document.getElementById("pauseMenu").style.display = "none";
+    document.getElementById("board").style.filter = ""; 
     backgroundMusic.play();
 }
 
@@ -179,6 +184,7 @@ function restartGame() {
     alienVelocityX = 1;
     alienColumns = 3;
     alienRows = 2;
+    document.getElementById("board").style.filter = ""; 
 
     gameStartTime = Date.now();
     pausedTime = 0;
