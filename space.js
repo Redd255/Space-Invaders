@@ -63,8 +63,7 @@ let alienVelocityX = 1;
 let walls = [];
 let wallWidth = tileSize * 2;
 let wallHeight = tileSize;
-let wallRows = 1;
-let wallColumns = 3;
+let wallColumns = 5;
 let wallHealth = 3;
 
 // ==========================
@@ -79,38 +78,53 @@ let bulletVelocityY = -10;
 let alienBulletArray = [];
 let alienBulletVelocityY = 5;
 
-// Sounds
+// ====================
+// Sounds Configuration
+// ====================
 const shootSound = new Audio("/music/shoot.wav");
 const backgroundMusic = new Audio("/music/background.wav")
 backgroundMusic.loop = true;
 
 
-window.onload = function () {
-    updateLevelStory(level);
-    backgroundMusic.play();
-
-    createShip();
-    createAliens();
-    createWalls();
-    startTimer();
-    scheduleAlienShoot();
-    requestAnimationFrame(update);
-
-
-    // Move
-    document.addEventListener("keydown", moveShip);
-    document.addEventListener("keyup", stopShip);
-
-    // Shoot
-    const debouncedShoot = debounce(shoot, 100);
-    document.addEventListener("keyup", debouncedShoot);
-
-    // Menu
-    document.addEventListener("keydown", function (e) {
-        if (e.code === "KeyP" && !gameOver) {
-            togglePause();
-        }
-    });
+// ===========================
+// Level stories configuration
+// ===========================
+const levelStories = {
+    1: {
+        title: "The Beginning",
+        story: "Earth's first line of defense. You command humanity's prototype space fighter against the initial alien scouts. They're testing our defenses - show them we're ready.",
+        button: "> Start Mission <"
+    },
+    2: {
+        title: "Rising Threat",
+        story: "The aliens have called for reinforcements. More ships, tighter formations. The real battle for Earth begins now.",
+        button: "> Begin Battle <"
+    },
+    3: {
+        title: "Strategic Formation",
+        story: "The invaders have analyzed our tactics. They've adopted a new attack pattern with strengthened defenses. Stay alert, pilot.",
+        button: "Engage Now"
+    },
+    4: {
+        title: "Elite Squadron",
+        story: "You've gained their respect. The aliens have dispatched their elite warriors. Their ships are faster and their aim deadlier.",
+        button: "Launch Attack"
+    },
+    5: {
+        title: "The Commander",
+        story: "Intelligence reports a commanding officer among the invasion force. Defeat them, and we might just turn the tide of this war.",
+        button: "Strike First"
+    },
+    6: {
+        title: "Full Invasion",
+        story: "The entire alien armada has arrived. Earth's fate rests in your hands. Show them the true spirit of humanity.",
+        button: "Defend Earth"
+    },
+    7: {
+        title: "Final Stand",
+        story: "This is it. Their supreme leader has joined the battle. Victory here means survival for Earth. Defeat means extinction.",
+        button: "Final Battle"
+    }
 };
 
 function createShip() {
@@ -123,6 +137,59 @@ function createShip() {
     ship.element.style.top = ship.y + "px";
     board.appendChild(ship.element);
 }
+
+function createAliens() {
+    alienArray = [];
+    for (let c = 0; c < alienColumns; c++) {
+        for (let r = 0; r < alienRows; r++) {
+            let alien = {
+                x: alienX + c * alienWidth,
+                y: alienY + r * alienHeight,
+                width: alienWidth,
+                height: alienHeight,
+                alive: true,
+                element: document.createElement("div")
+            };
+
+            alien.element.className = "alien";
+            alien.element.style.width = alienWidth + "px";
+            alien.element.style.height = alienHeight + "px";
+            alien.element.style.left = alien.x + "px";
+            alien.element.style.top = alien.y + "px";
+
+            board.appendChild(alien.element);
+            alienArray.push(alien);
+        }
+    }
+    alienCount = alienArray.length;
+    console.log(alienArray)
+
+}
+
+function createWalls() {
+    walls = [];
+    let startY = shipY - tileSize * 4;
+    for (let c = 1; c <= wallColumns; c++) {
+        let wall = {
+            x: c * 120 ,
+            y: startY,
+            width: wallWidth,
+            height: wallHeight,
+            health: wallHealth,
+            element: document.createElement("div")
+        };
+
+        wall.element.className = "wall";
+        wall.element.style.width = wall.width + "px";
+        wall.element.style.height = wall.height + "px";
+        wall.element.style.left = wall.x + "px";
+        wall.element.style.top = wall.y + "px";
+
+        board.appendChild(wall.element);
+        walls.push(wall);
+    }
+}
+
 function startTimer() {
     if (!isTimerRunning) {
         gameStartTime = Date.now() - pausedTime;
@@ -164,10 +231,10 @@ function resumeGame() {
     document.getElementById("pauseMenu").style.display = "none";
     document.getElementById("board").style.filter = "";
     scheduleAlienShoot();
+    backgroundMusic.play();
 }
 
 function restartGame() {
-    console.log("check")
     gameOver = false;
     isPaused = false;
     level = 1;
@@ -179,6 +246,7 @@ function restartGame() {
     alienColumns = 3;
     alienRows = 2;
     updateLevelStory(level);
+    
 
 
     gameStartTime = Date.now();
@@ -214,63 +282,6 @@ function restartGame() {
     createWalls();
     startTimer();
 
-}
-
-
-function createAliens() {
-    // Clear existing aliens
-    alienArray.forEach(alien => alien.element.remove());
-    alienArray = [];
-
-    // Create new aliens
-    for (let c = 0; c < alienColumns; c++) {
-        for (let r = 0; r < alienRows; r++) {
-            let alien = {
-                x: alienX + c * alienWidth,
-                y: alienY + r * alienHeight,
-                width: alienWidth,
-                height: alienHeight,
-                alive: true,
-                element: document.createElement("div")
-            };
-
-            alien.element.className = "alien";
-            alien.element.style.width = alienWidth + "px";
-            alien.element.style.height = alienHeight + "px";
-            alien.element.style.left = alien.x + "px";
-            alien.element.style.top = alien.y + "px";
-
-            board.appendChild(alien.element);
-            alienArray.push(alien);
-        }
-    }
-    alienCount = alienArray.length;
-}
-
-function createWalls() {
-    walls = [];
-    let startX = (boardWidth - wallColumns * (wallWidth + tileSize)) / 2;
-    let startY = shipY - tileSize * 4;
-
-    for (let c = 0; c < wallColumns; c++) {
-        let wall = {
-            x: startX + c * (wallWidth + tileSize),
-            y: startY,
-            width: wallWidth,
-            height: wallHeight,
-            health: wallHealth,
-            element: document.createElement("div")
-        };
-
-        wall.element.className = "wall";
-        wall.element.style.width = wall.width + "px";
-        wall.element.style.height = wall.height + "px";
-        wall.element.style.left = wall.x + "px";
-        wall.element.style.top = wall.y + "px";
-
-        board.appendChild(wall.element);
-        walls.push(wall);
-    }
 }
 
 function update() {
@@ -479,8 +490,6 @@ function shoot(e) {
 }
 
 function alienShoot() {
-
-    console.log(isPaused)
     if (isPaused) return
     // Choose a random alien to shoot
     let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
@@ -546,46 +555,6 @@ function updateLevelStory(level) {
     storyDiv.style.display = "block"
 }
 
-// Level stories configuration
-const levelStories = {
-    1: {
-        title: "The Beginning",
-        story: "Earth's first line of defense. You command humanity's prototype space fighter against the initial alien scouts. They're testing our defenses - show them we're ready.",
-        button: "> Start Mission <"
-    },
-    2: {
-        title: "Rising Threat",
-        story: "The aliens have called for reinforcements. More ships, tighter formations. The real battle for Earth begins now.",
-        button: "> Begin Battle <"
-    },
-    3: {
-        title: "Strategic Formation",
-        story: "The invaders have analyzed our tactics. They've adopted a new attack pattern with strengthened defenses. Stay alert, pilot.",
-        button: "Engage Now"
-    },
-    4: {
-        title: "Elite Squadron",
-        story: "You've gained their respect. The aliens have dispatched their elite warriors. Their ships are faster and their aim deadlier.",
-        button: "Launch Attack"
-    },
-    5: {
-        title: "The Commander",
-        story: "Intelligence reports a commanding officer among the invasion force. Defeat them, and we might just turn the tide of this war.",
-        button: "Strike First"
-    },
-    6: {
-        title: "Full Invasion",
-        story: "The entire alien armada has arrived. Earth's fate rests in your hands. Show them the true spirit of humanity.",
-        button: "Defend Earth"
-    },
-    7: {
-        title: "Final Stand",
-        story: "This is it. Their supreme leader has joined the battle. Victory here means survival for Earth. Defeat means extinction.",
-        button: "Final Battle"
-    }
-};
-
-
 // Function to get level content
 function getLevelContent(level) {
     return levelStories[level] || {
@@ -594,3 +563,30 @@ function getLevelContent(level) {
         button: "continue"
     };
 }
+
+
+window.onload = function () {
+    updateLevelStory(level);
+
+    createShip();
+    createAliens();
+    createWalls();
+    startTimer();
+    scheduleAlienShoot();
+    requestAnimationFrame(update);
+
+    // Move
+    document.addEventListener("keydown", moveShip);
+    document.addEventListener("keyup", stopShip);
+
+    // Shoot
+    const debouncedShoot = debounce(shoot, 100);
+    document.addEventListener("keyup", debouncedShoot);
+
+    // Menu
+    document.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !gameOver) {
+            togglePause();
+        }
+    });
+};
