@@ -5,7 +5,7 @@ const tileSize = 40;
 const rows = 20;
 const columns = 20;
 let gameOver = false;
-let isPaused = false;
+let isPaused = true;
 let gameStartTime = null;
 let pausedTime = 0;
 let isTimerRunning = false;
@@ -82,30 +82,19 @@ let alienBulletVelocityY = 5;
 // Sounds
 const shootSound = new Audio("/music/shoot.wav");
 const backgroundMusic = new Audio("/music/background.wav")
+backgroundMusic.loop = true;
 
 
 window.onload = function () {
     updateLevelStory(level);
-
-    backgroundMusic.loop = true;
     backgroundMusic.play();
 
-    board = document.getElementById("board");
-    board.style.width = boardWidth + "px";
-    board.style.height = boardHeight + "px";
-
-    ship.element = document.createElement("div");
-    ship.element.className = "ship";
-    ship.element.style.width = shipWidth + "px";
-    ship.element.style.height = shipHeight + "px";
-
-    board.appendChild(ship.element);
-
+    createShip();
     createAliens();
     createWalls();
-    requestAnimationFrame(update);
     startTimer();
     scheduleAlienShoot();
+    requestAnimationFrame(update);
 
 
     // Move
@@ -124,6 +113,16 @@ window.onload = function () {
     });
 };
 
+function createShip() {
+    board = document.getElementById("board");
+    ship.element = document.createElement("div");
+    ship.element.className = "ship";
+    ship.element.style.width = shipWidth + "px";
+    ship.element.style.height = shipHeight + "px";
+    ship.element.style.left = ship.x + "px";
+    ship.element.style.top = ship.y + "px";
+    board.appendChild(ship.element);
+}
 function startTimer() {
     if (!isTimerRunning) {
         gameStartTime = Date.now() - pausedTime;
@@ -149,7 +148,7 @@ function togglePause() {
         pausedTime = Date.now() - gameStartTime;
         backgroundMusic.pause();
         document.getElementById("pauseMenu").style.display = "block";
-        document.getElementById("board").style.filter = "blur(10px)"; 
+        document.getElementById("board").style.filter = "blur(10px)";
     } else {
         // Resume timer
         resumeGame()
@@ -157,12 +156,13 @@ function togglePause() {
 }
 
 function resumeGame() {
+    document.getElementById("levelStory").style.display = "none"
     isPaused = false;
     gameStartTime = Date.now() - pausedTime;
     isTimerRunning = true;
     backgroundMusic.play();
     document.getElementById("pauseMenu").style.display = "none";
-    document.getElementById("board").style.filter = ""; 
+    document.getElementById("board").style.filter = "";
     scheduleAlienShoot();
 }
 
@@ -178,8 +178,8 @@ function restartGame() {
     alienVelocityX = 1;
     alienColumns = 3;
     alienRows = 2;
-    document.getElementById("pauseMenu").style.display = "none";
-    document.getElementById("board").style.filter = ""; 
+    updateLevelStory(level);
+
 
     gameStartTime = Date.now();
     pausedTime = 0;
@@ -208,18 +208,10 @@ function restartGame() {
 
     document.getElementById("gameOver").style.display = "none";
 
-    ship.element = document.createElement("div");
-    ship.element.className = "ship";
-    ship.element.style.width = shipWidth + "px";
-    ship.element.style.height = shipHeight + "px";
-    board.appendChild(ship.element);
-
+    backgroundMusic.play();
+    createShip();
     createAliens();
     createWalls();
-    updateLevelStory(level);
-
-    backgroundMusic.currentTime = 0;
-    backgroundMusic.play();
     startTimer();
 
 }
@@ -519,7 +511,7 @@ function alienShoot() {
 function scheduleAlienShoot() {
     setTimeout(() => {
         alienShoot();
-        if (isTimerRunning){
+        if (isTimerRunning) {
             scheduleAlienShoot();
         }
     }, 1000 + Math.random() * 3000);
@@ -540,50 +532,65 @@ function debounce(func, delay) {
 
 // Function to update level story
 function updateLevelStory(level) {
+    isPaused = true
+    document.getElementById("board").style.filter = "blur(10px)";
+    document.getElementById("pauseMenu").style.display = "none";
+
     const storyDiv = document.getElementById('levelStory');
     const content = getLevelContent(level);
     storyDiv.innerHTML = `
         <h2>Level ${level}: ${content.title}</h2>
         <p>${content.story}</p>
+        <button onclick="resumeGame()">${content.button}</button>
     `;
+    storyDiv.style.display = "block"
 }
 
 // Level stories configuration
 const levelStories = {
     1: {
         title: "The Beginning",
-        story: "Earth's first line of defense. You command humanity's prototype space fighter against the initial alien scouts. They're testing our defenses - show them we're ready."
+        story: "Earth's first line of defense. You command humanity's prototype space fighter against the initial alien scouts. They're testing our defenses - show them we're ready.",
+        button: "> Start Mission <"
     },
     2: {
         title: "Rising Threat",
-        story: "The aliens have called for reinforcements. More ships, tighter formations. The real battle for Earth begins now."
+        story: "The aliens have called for reinforcements. More ships, tighter formations. The real battle for Earth begins now.",
+        button: "> Begin Battle <"
     },
     3: {
         title: "Strategic Formation",
-        story: "The invaders have analyzed our tactics. They've adopted a new attack pattern with strengthened defenses. Stay alert, pilot."
+        story: "The invaders have analyzed our tactics. They've adopted a new attack pattern with strengthened defenses. Stay alert, pilot.",
+        button: "Engage Now"
     },
     4: {
         title: "Elite Squadron",
-        story: "You've gained their respect. The aliens have dispatched their elite warriors. Their ships are faster and their aim deadlier."
+        story: "You've gained their respect. The aliens have dispatched their elite warriors. Their ships are faster and their aim deadlier.",
+        button: "Launch Attack"
     },
     5: {
         title: "The Commander",
-        story: "Intelligence reports a commanding officer among the invasion force. Defeat them, and we might just turn the tide of this war."
+        story: "Intelligence reports a commanding officer among the invasion force. Defeat them, and we might just turn the tide of this war.",
+        button: "Strike First"
     },
     6: {
         title: "Full Invasion",
-        story: "The entire alien armada has arrived. Earth's fate rests in your hands. Show them the true spirit of humanity."
+        story: "The entire alien armada has arrived. Earth's fate rests in your hands. Show them the true spirit of humanity.",
+        button: "Defend Earth"
     },
     7: {
         title: "Final Stand",
-        story: "This is it. Their supreme leader has joined the battle. Victory here means survival for Earth. Defeat means extinction."
+        story: "This is it. Their supreme leader has joined the battle. Victory here means survival for Earth. Defeat means extinction.",
+        button: "Final Battle"
     }
 };
+
 
 // Function to get level content
 function getLevelContent(level) {
     return levelStories[level] || {
         title: `Unknown Level ${level}`,
-        story: "New challenges await in uncharted space."
+        story: "New challenges await in uncharted space.",
+        button: "continue"
     };
 }
