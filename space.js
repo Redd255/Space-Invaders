@@ -133,13 +133,10 @@ function startTimer() {
 
 function updateTimer() {
     if (gameOver || !isTimerRunning) return;
-
     const currentTime = Date.now();
     totalElapsedTime = currentTime - gameStartTime;
-
     const minutes = Math.floor(totalElapsedTime / 60000);
     const seconds = Math.floor((totalElapsedTime % 60000) / 1000);
-
     document.getElementById("gameTimer").textContent =
         `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
@@ -155,25 +152,22 @@ function togglePause() {
         document.getElementById("board").style.filter = "blur(10px)"; 
     } else {
         // Resume timer
-        scheduleAlienShoot();
-        gameStartTime = Date.now() - pausedTime;
-        isTimerRunning = true;
-        backgroundMusic.play();
-        document.getElementById("pauseMenu").style.display = "none";
-        document.getElementById("board").style.filter = "blur(10px)"; 
-        document.getElementById("board").style.filter = ""; 
-
+        resumeGame()
     }
 }
 
 function resumeGame() {
     isPaused = false;
+    gameStartTime = Date.now() - pausedTime;
+    isTimerRunning = true;
+    backgroundMusic.play();
     document.getElementById("pauseMenu").style.display = "none";
     document.getElementById("board").style.filter = ""; 
-    backgroundMusic.play();
+    scheduleAlienShoot();
 }
 
 function restartGame() {
+    console.log("check")
     gameOver = false;
     isPaused = false;
     level = 1;
@@ -184,6 +178,7 @@ function restartGame() {
     alienVelocityX = 1;
     alienColumns = 3;
     alienRows = 2;
+    document.getElementById("pauseMenu").style.display = "none";
     document.getElementById("board").style.filter = ""; 
 
     gameStartTime = Date.now();
@@ -208,11 +203,7 @@ function restartGame() {
             <p id="gameTimer">Time: 00:00</p>
             <p id="health">Health: ${ship.health}</p>
         </div>
-        <div id="pauseMenu" class="gameOverScreen" style="display: none;">
-            <h2>Game Paused</h2>
-            <button onclick="resumeGame()">Resume</button>
-            <button onclick="restartGame()">Restart</button>
-        </div>
+
     `;
 
     document.getElementById("gameOver").style.display = "none";
@@ -230,6 +221,7 @@ function restartGame() {
     backgroundMusic.currentTime = 0;
     backgroundMusic.play();
     startTimer();
+
 }
 
 
@@ -495,6 +487,9 @@ function shoot(e) {
 }
 
 function alienShoot() {
+
+    console.log(isPaused)
+    if (isPaused) return
     // Choose a random alien to shoot
     let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
 
