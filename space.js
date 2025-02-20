@@ -127,6 +127,7 @@ const levelStories = {
     }
 };
 
+
 function createShip() {
     board = document.getElementById("board");
     ship.element = document.createElement("div");
@@ -190,6 +191,105 @@ function createWalls() {
     }
 }
 
+function shoot(e) {
+    if (gameOver || e.code !== "Space") return;
+    let bulletSound = shootSound.cloneNode();
+    bulletSound.play(); let bullet = {
+        x: ship.x + shipWidth / 2 - tileSize / 16,
+        y: ship.y,
+        width: tileSize / 8,
+        height: tileSize / 2,
+        used: false,
+        element: document.createElement("div")
+    };
+
+    bullet.element.className = "bullet";
+    bullet.element.style.width = bullet.width + "px";
+    bullet.element.style.height = bullet.height + "px";
+    bullet.element.style.left = bullet.x + "px";
+    bullet.element.style.top = bullet.y + "px";
+
+    board.appendChild(bullet.element);
+    bulletArray.push(bullet);
+}
+
+function alienShoot() {
+    if (isPaused) return
+    // Choose a random alien to shoot
+    let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
+
+    // If the alien is alive, create a bullet
+    if (randomAlien.alive) {
+        let alienBullet = {
+            x: randomAlien.x + randomAlien.width / 2 - tileSize / 16,
+            y: randomAlien.y + randomAlien.height,
+            width: tileSize / 8,
+            height: tileSize / 2,
+            used: false,
+            element: document.createElement("div")
+        };
+
+        alienBullet.element.className = "alienBullet";
+        alienBullet.element.style.width = alienBullet.width + "px";
+        alienBullet.element.style.height = alienBullet.height + "px";
+        alienBullet.element.style.left = alienBullet.x + "px";
+        alienBullet.element.style.top = alienBullet.y + "px";
+
+        board.appendChild(alienBullet.element);
+        alienBulletArray.push(alienBullet);
+    }
+}
+
+function resumeGame() {
+    document.getElementById("levelStory").style.display = "none"
+    isPaused = false;
+    gameStartTime = Date.now() - pausedTime;
+    isTimerRunning = true;
+    backgroundMusic.play();
+    document.getElementById("pauseMenu").style.display = "none";
+    document.getElementById("board").style.filter = "";
+    scheduleAlienShoot();
+    backgroundMusic.play();
+}
+
+function restartGame() {
+    gameOver = false;
+    isPaused = false;
+    level = 1;
+    score = 0;
+    ship.health = health;
+    ship.x = tileSize * columns / 2 - tileSize;
+    ship.y = tileSize * rows - tileSize * 2;
+    alienVelocityX = 1;
+    alienColumns = 3;
+    alienRows = 2;
+    gameStartTime = Date.now();
+    pausedTime = 0;
+    totalElapsedTime = 0;
+    isTimerRunning = true;
+    bulletArray = [];
+    alienBulletArray = [];
+    alienArray = [];
+    walls = [];
+    updateLevelStory(level);
+
+    board.innerHTML = `
+        <div class="progress">
+            <p id="level">Level: 1</p>
+            <p id="score">Score: 0</p>
+            <p id="gameTimer">Time: 00:00</p>
+            <p id="health">Health: ${ship.health}</p>
+        </div>
+    `;
+    document.getElementById("gameOver").style.display = "none";
+
+    backgroundMusic.play();
+    createShip();
+    createAliens();
+    createWalls();
+    startTimer();
+}
+
 function startTimer() {
     if (!isTimerRunning) {
         gameStartTime = Date.now() - pausedTime;
@@ -222,67 +322,7 @@ function togglePause() {
     }
 }
 
-function resumeGame() {
-    document.getElementById("levelStory").style.display = "none"
-    isPaused = false;
-    gameStartTime = Date.now() - pausedTime;
-    isTimerRunning = true;
-    backgroundMusic.play();
-    document.getElementById("pauseMenu").style.display = "none";
-    document.getElementById("board").style.filter = "";
-    scheduleAlienShoot();
-    backgroundMusic.play();
-}
 
-function restartGame() {
-    gameOver = false;
-    isPaused = false;
-    level = 1;
-    score = 0;
-    ship.health = health;
-    ship.x = tileSize * columns / 2 - tileSize;
-    ship.y = tileSize * rows - tileSize * 2;
-    alienVelocityX = 1;
-    alienColumns = 3;
-    alienRows = 2;
-    updateLevelStory(level);
-    
-
-
-    gameStartTime = Date.now();
-    pausedTime = 0;
-    totalElapsedTime = 0;
-    isTimerRunning = true;
-
-    bulletArray.forEach(bullet => bullet.element.remove());
-    bulletArray = [];
-    alienBulletArray.forEach(bullet => bullet.element.remove());
-    alienBulletArray = [];
-
-    alienArray.forEach(alien => alien.element.remove());
-    alienArray = [];
-    walls.forEach(wall => wall.element.remove());
-    walls = [];
-
-    board.innerHTML = `
-        <div class="progress">
-            <p id="level">Level: 1</p>
-            <p id="score">Score: 0</p>
-            <p id="gameTimer">Time: 00:00</p>
-            <p id="health">Health: ${ship.health}</p>
-        </div>
-
-    `;
-
-    document.getElementById("gameOver").style.display = "none";
-
-    backgroundMusic.play();
-    createShip();
-    createAliens();
-    createWalls();
-    startTimer();
-
-}
 
 function update() {
     requestAnimationFrame(update);
@@ -465,55 +505,6 @@ function detectCollision(a, b) {
         a.x + a.width > b.x &&
         a.y < b.y + b.height &&
         a.y + a.height > b.y;
-}
-
-function shoot(e) {
-    if (gameOver || e.code !== "Space") return;
-    let bulletSound = shootSound.cloneNode();
-    bulletSound.play(); let bullet = {
-        x: ship.x + shipWidth / 2 - tileSize / 16,
-        y: ship.y,
-        width: tileSize / 8,
-        height: tileSize / 2,
-        used: false,
-        element: document.createElement("div")
-    };
-
-    bullet.element.className = "bullet";
-    bullet.element.style.width = bullet.width + "px";
-    bullet.element.style.height = bullet.height + "px";
-    bullet.element.style.left = bullet.x + "px";
-    bullet.element.style.top = bullet.y + "px";
-
-    board.appendChild(bullet.element);
-    bulletArray.push(bullet);
-}
-
-function alienShoot() {
-    if (isPaused) return
-    // Choose a random alien to shoot
-    let randomAlien = alienArray[Math.floor(Math.random() * alienArray.length)];
-
-    // If the alien is alive, create a bullet
-    if (randomAlien.alive) {
-        let alienBullet = {
-            x: randomAlien.x + randomAlien.width / 2 - tileSize / 16,
-            y: randomAlien.y + randomAlien.height,
-            width: tileSize / 8,
-            height: tileSize / 2,
-            used: false,
-            element: document.createElement("div")
-        };
-
-        alienBullet.element.className = "alienBullet";
-        alienBullet.element.style.width = alienBullet.width + "px";
-        alienBullet.element.style.height = alienBullet.height + "px";
-        alienBullet.element.style.left = alienBullet.x + "px";
-        alienBullet.element.style.top = alienBullet.y + "px";
-
-        board.appendChild(alienBullet.element);
-        alienBulletArray.push(alienBullet);
-    }
 }
 
 // Helper function for Aliens shoots 
