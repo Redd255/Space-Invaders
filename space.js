@@ -163,8 +163,6 @@ function createAliens() {
         }
     }
     alienCount = alienArray.length;
-    console.log(alienArray)
-
 }
 
 function createWalls() {
@@ -172,7 +170,7 @@ function createWalls() {
     let startY = shipY - tileSize * 4;
     for (let c = 1; c <= wallColumns; c++) {
         let wall = {
-            x: c * 120 ,
+            x: c * 120,
             y: startY,
             width: wallWidth,
             height: wallHeight,
@@ -192,7 +190,7 @@ function createWalls() {
 }
 
 function shoot(e) {
-    if (gameOver || e.code !== "Space") return;
+    if (gameOver || e.code !== "Space" || isPaused) return;
     let bulletSound = shootSound.cloneNode();
     bulletSound.play(); let bullet = {
         x: ship.x + shipWidth / 2 - tileSize / 16,
@@ -241,15 +239,14 @@ function alienShoot() {
 }
 
 function resumeGame() {
-    document.getElementById("levelStory").style.display = "none"
     isPaused = false;
-    gameStartTime = Date.now() - pausedTime;
     isTimerRunning = true;
+
+    document.getElementById("levelStory").style.display = "none"
+    gameStartTime = Date.now() - pausedTime;
     backgroundMusic.play();
     document.getElementById("pauseMenu").style.display = "none";
-    document.getElementById("board").style.filter = "";
-    scheduleAlienShoot();
-    backgroundMusic.play();
+    // document.getElementById("board").style.filter = "";
 }
 
 function restartGame() {
@@ -298,7 +295,7 @@ function startTimer() {
 }
 
 function updateTimer() {
-    if (gameOver || !isTimerRunning) return;
+    if (gameOver || !isTimerRunning || isPaused) return;
     const currentTime = Date.now();
     totalElapsedTime = currentTime - gameStartTime;
     const minutes = Math.floor(totalElapsedTime / 60000);
@@ -309,16 +306,18 @@ function updateTimer() {
 
 function togglePause() {
     isPaused = !isPaused;
+
     if (isPaused) {
         // Pause timer
         isTimerRunning = false;
         pausedTime = Date.now() - gameStartTime;
         backgroundMusic.pause();
         document.getElementById("pauseMenu").style.display = "block";
-        document.getElementById("board").style.filter = "blur(10px)";
+        // document.getElementById("board").style.filter = "blur(10px)";
     } else {
         // Resume timer
         resumeGame()
+        scheduleAlienShoot()
     }
 }
 
@@ -326,20 +325,10 @@ function togglePause() {
 
 function update() {
     requestAnimationFrame(update);
-    if (gameOver || isPaused) return;
+    if (gameOver || isPaused || !isTimerRunning) return;
     updateTimer()
-    // Update the ship position
-    if (movingRight && ship.x + shipVelocityX + ship.width <= boardWidth) {
-        ship.x += shipVelocityX;
-    }
-    if (movingLeft && ship.x - shipVelocityX >= 0) {
-        ship.x -= shipVelocityX;
-    }
-    ship.element.style.left = ship.x + "px";
-    ship.element.style.top = ship.y + "px";
-
-
     // Update aliens
+
     let edgeReached = false;
     for (let i = 0; i < alienArray.length; i++) {
         let alien = alienArray[i];
@@ -469,20 +458,42 @@ function update() {
 
     // Next level
     if (alienCount === 0) {
+        isPaused = true
+        isTimerRunning = false
         level++
         document.getElementById("level").textContent = "Level: " + level
         score += alienColumns * alienRows * 100;
         alienColumns = Math.min(alienColumns + 1, columns / 2 - 2);
         alienRows = Math.min(alienRows + 1, rows - 4);
         alienVelocityX += alienVelocityX > 0 ? 0.2 : -0.2;
+        bulletArray.forEach((e) => {
+            e.element.remove()
+        })
+        alienBulletArray.forEach((e) => {
+            e.element.remove()
+        })
+        alienBulletArray = []
+        bulletArray = [];
         createAliens();
         updateLevelStory(level);
+        pausedTime = Date.now() - gameStartTime;
     }
 }
 
+function moveAnimation() {
+    requestAnimationFrame(moveAnimation);
+    if (gameOver || isPaused) return;
 
+    if (movingRight && ship.x + shipVelocityX + ship.width <= boardWidth) {
+        ship.x += shipVelocityX;
+    }
+    if (movingLeft && ship.x - shipVelocityX >= 0) {
+        ship.x -= shipVelocityX;
+    }
+    ship.element.style.left = ship.x + "px";
+}
 function moveShip(e) {
-    if (gameOver) return;
+    if (gameOver || isPaused) return;
     if (e.code === "ArrowLeft") {
         movingLeft = true;
     } else if (e.code === "ArrowRight") {
@@ -491,7 +502,7 @@ function moveShip(e) {
 }
 
 function stopShip(e) {
-    if (gameOver) return;
+    if (gameOver || isPaused) return;
     if (e.code === "ArrowLeft") {
         movingLeft = false;
     } else if (e.code === "ArrowRight") {
@@ -509,14 +520,13 @@ function detectCollision(a, b) {
 
 // Helper function for Aliens shoots 
 function scheduleAlienShoot() {
-    setTimeout(() => {
-        alienShoot();
-        if (isTimerRunning) {
-            scheduleAlienShoot();
-        }
-    }, 1000 + Math.random() * 3000);
-}
+    if (isPaused || gameOver) return;
 
+    alienShoot();
+    requestAnimationFrame(() => {
+        setTimeout(scheduleAlienShoot, 10000 + Math.random() * 1000);
+    });
+}
 
 // Helper function for Ship shoots 
 function debounce(func, delay) {
@@ -533,7 +543,7 @@ function debounce(func, delay) {
 // Function to update level story
 function updateLevelStory(level) {
     isPaused = true
-    document.getElementById("board").style.filter = "blur(10px)";
+    // document.getElementById("board").style.filter = "blur(10px)";
     document.getElementById("pauseMenu").style.display = "none";
 
     const storyDiv = document.getElementById('levelStory');
@@ -558,12 +568,12 @@ function getLevelContent(level) {
 
 window.onload = function () {
     updateLevelStory(level);
-
     createShip();
     createAliens();
     createWalls();
     startTimer();
     scheduleAlienShoot();
+    requestAnimationFrame(moveAnimation);
     requestAnimationFrame(update);
 
     // Move
@@ -571,7 +581,7 @@ window.onload = function () {
     document.addEventListener("keyup", stopShip);
 
     // Shoot
-    const debouncedShoot = debounce(shoot, 100);
+    const debouncedShoot = debounce(shoot, 400);
     document.addEventListener("keyup", debouncedShoot);
 
     // Menu
@@ -580,4 +590,13 @@ window.onload = function () {
             togglePause();
         }
     });
+    //     let lastTime = performance.now();
+    // function measureFPS() {
+    //     let now = performance.now();
+    //     let fps = 1000 / (now - lastTime);
+    //     console.log(`FPS: ${Math.round(fps)}`);
+    //     lastTime = now;
+    //     requestAnimationFrame(measureFPS);
+    // }
+    // measureFPS();
 };
